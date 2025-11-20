@@ -1,0 +1,750 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>星爺台詞百萬挑戰 (百題隨機版)</title>
+    <style>
+        /* --- 全局變數與重置 --- */
+        :root {
+            --bg-color: #0a0a1a; /* 深藍黑背景 */
+            --panel-bg: #161b33;
+            --gold: #ffd700;     /* 經典金色 */
+            --gold-dim: #b8860b;
+            --text-white: #ffffff;
+            --green: #2ecc71;
+            --red: #e74c3c;
+            --blue: #3498db;
+            --disabled: #555555;
+        }
+
+        * { box-sizing: border-box; user-select: none; }
+
+        body {
+            margin: 0;
+            font-family: "Microsoft JhengHei", "Heiti TC", sans-serif;
+            background-color: var(--bg-color);
+            background-image: radial-gradient(circle at center, #1a2540 0%, #000000 100%);
+            color: var(--text-white);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* --- 佈局容器 --- */
+        #app {
+            display: flex;
+            height: 100%;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            position: relative;
+        }
+
+        /* --- 左側：獎金階梯 --- */
+        .ladder-panel {
+            width: 200px;
+            background: rgba(0, 0, 0, 0.6);
+            border-right: 2px solid var(--gold-dim);
+            display: flex;
+            flex-direction: column-reverse; /* 讓第1題在最下面 */
+            padding: 20px 10px;
+            justify-content: center;
+        }
+
+        .ladder-step {
+            padding: 5px 10px;
+            margin: 2px 0;
+            font-size: 14px;
+            color: #888;
+            border-radius: 4px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .ladder-step.active {
+            background-color: var(--gold);
+            color: #000;
+            font-weight: bold;
+            box-shadow: 0 0 10px var(--gold);
+            transform: scale(1.05);
+        }
+
+        .ladder-step.safety {
+            color: var(--text-white);
+            font-weight: bold;
+        }
+
+        .ladder-step.passed {
+            color: var(--gold-dim);
+        }
+
+        /* --- 中央：遊戲主區 --- */
+        .game-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        /* --- 頂部資訊 --- */
+        .header-info {
+            position: absolute;
+            top: 20px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            font-size: 1.2rem;
+            color: var(--gold);
+            text-shadow: 1px 1px 2px black;
+        }
+
+        /* --- 題目區 --- */
+        .question-box {
+            background: linear-gradient(135deg, #2c3e50, #000);
+            border: 3px solid var(--gold);
+            border-radius: 15px;
+            padding: 30px;
+            width: 90%;
+            min-height: 150px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            margin-bottom: 40px;
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .question-cat {
+            color: var(--gold);
+            font-size: 1rem;
+            margin-bottom: 10px;
+            border: 1px solid var(--gold);
+            padding: 2px 10px;
+            border-radius: 20px;
+        }
+
+        .question-text {
+            font-size: 1.8rem;
+            line-height: 1.4;
+            font-weight: bold;
+        }
+
+        /* --- 選項區 --- */
+        .options-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            width: 90%;
+        }
+
+        .option-btn {
+            background: #1a1a1a;
+            border: 2px solid #555;
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.3rem;
+            border-radius: 50px; /* 橢圓形 */
+            cursor: pointer;
+            text-align: left;
+            transition: all 0.2s;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-btn::before {
+            content: attr(data-index);
+            color: var(--gold);
+            font-weight: bold;
+            margin-right: 15px;
+            font-size: 1.4rem;
+        }
+
+        .option-btn:hover:not([disabled]) {
+            background: #333;
+            border-color: var(--gold);
+        }
+
+        .option-btn.selected {
+            background: var(--gold);
+            color: black;
+            border-color: white;
+        }
+        
+        .option-btn.correct {
+            background: var(--green);
+            border-color: white;
+            animation: blink 0.5s 3;
+        }
+
+        .option-btn.wrong {
+            background: var(--red);
+            border-color: white;
+        }
+
+        @keyframes blink { 0% {opacity: 1;} 50% {opacity: 0.5;} 100% {opacity: 1;} }
+
+        /* --- 求助錦囊 --- */
+        .lifelines-row {
+            margin-top: 40px;
+            display: flex;
+            gap: 30px;
+        }
+
+        .lifeline-btn {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            border: 3px solid white;
+            background: radial-gradient(circle, #4a90e2, #003366);
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 0 15px rgba(74, 144, 226, 0.5);
+            transition: transform 0.1s;
+        }
+
+        .lifeline-btn i { font-size: 20px; margin-bottom: 5px; font-style: normal;}
+        .lifeline-btn:active { transform: scale(0.95); }
+
+        .lifeline-btn.used {
+            background: var(--disabled);
+            border-color: #888;
+            cursor: not-allowed;
+            opacity: 0.6;
+            box-shadow: none;
+        }
+
+        /* --- 開始與結束畫面 (Overlay) --- */
+        .overlay-screen {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        .overlay-title {
+            font-size: 3.5rem;
+            color: var(--gold);
+            margin-bottom: 20px;
+            text-shadow: 0 0 20px var(--gold-dim);
+        }
+
+        .overlay-desc {
+            font-size: 1.5rem;
+            margin-bottom: 40px;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        .btn-start {
+            background: linear-gradient(to bottom, var(--gold), var(--gold-dim));
+            border: none;
+            padding: 15px 50px;
+            font-size: 2rem;
+            font-weight: bold;
+            border-radius: 50px;
+            cursor: pointer;
+            box-shadow: 0 0 20px var(--gold);
+            color: #000;
+        }
+        .btn-start:hover { transform: scale(1.1); }
+
+        /* --- 彈窗 (Modal) --- */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 200;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: #2c3e50;
+            border: 2px solid var(--gold);
+            padding: 30px;
+            border-radius: 15px;
+            width: 90%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        .chart-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 150px;
+            margin: 20px 0;
+        }
+
+        .bar-wrap { display: flex; flex-direction: column; align-items: center; width: 15%; }
+        .bar { background: var(--gold); width: 100%; transition: height 1s; }
+        .bar-label { margin-top: 5px; color: var(--gold); font-weight: bold; }
+        .bar-val { margin-bottom: 5px; font-size: 12px; }
+
+        .phone-msg {
+            background: #e5e5ea;
+            color: black;
+            padding: 15px;
+            border-radius: 20px;
+            text-align: left;
+            font-size: 1.1rem;
+            position: relative;
+            margin: 20px 0;
+        }
+        .phone-msg::after {
+            content: ''; position: absolute; bottom: -10px; left: 20px;
+            border-width: 10px 10px 0; border-style: solid;
+            border-color: #e5e5ea transparent;
+        }
+
+        /* --- 手機版適配 --- */
+        @media (max-width: 768px) {
+            .ladder-panel { display: none; } /* 手機隱藏左側列表 */
+            .game-area { padding: 10px; }
+            .question-text { font-size: 1.4rem; }
+            .options-grid { grid-template-columns: 1fr; } /* 單欄顯示 */
+            .header-info { font-size: 1rem; }
+            .lifeline-btn { width: 60px; height: 60px; font-size: 12px; }
+            .overlay-title { font-size: 2.5rem; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="app">
+        <div class="ladder-panel" id="ladder"></div>
+
+        <div class="game-area">
+            <div class="header-info">
+                <span id="current-level-display">第 1 題</span>
+                <span id="current-money-display">$0</span>
+            </div>
+
+            <div class="question-box">
+                <div class="question-cat" id="q-category">周星馳電影</div>
+                <div class="question-text" id="q-text">題目載入中...</div>
+            </div>
+
+            <div class="options-grid">
+                <button class="option-btn" data-index="A" onclick="handleAnswer(0)" id="btn-0">選項 A</button>
+                <button class="option-btn" data-index="B" onclick="handleAnswer(1)" id="btn-1">選項 B</button>
+                <button class="option-btn" data-index="C" onclick="handleAnswer(2)" id="btn-2">選項 C</button>
+                <button class="option-btn" data-index="D" onclick="handleAnswer(3)" id="btn-3">選項 D</button>
+            </div>
+
+            <div class="lifelines-row">
+                <button class="lifeline-btn" id="ll-5050" onclick="useLifeline('5050')"><i>✂️</i>50:50</button>
+                <button class="lifeline-btn" id="ll-poll" onclick="useLifeline('poll')"><i>📊</i>觀眾<br>票選</button>
+                <button class="lifeline-btn" id="ll-phone" onclick="useLifeline('phone')"><i>📞</i>電話<br>求助</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="start-screen" class="overlay-screen">
+        <div class="overlay-title">星爺台詞<br>百萬挑戰</div>
+        <div class="overlay-desc">
+            收錄 100 條經典周星馳電影題目！<br>
+            每次挑戰隨機抽選 15 題。<br>
+            「做人如果冇夢想，同條鹹魚有咩分別？」
+        </div>
+        <button class="btn-start" onclick="startGame()">開始挑戰</button>
+    </div>
+
+    <div id="end-screen" class="overlay-screen" style="display: none;">
+        <div class="overlay-title" id="end-title">挑戰失敗</div>
+        <div class="overlay-desc" id="end-msg">你獲得了...</div>
+        <div style="font-size: 3rem; color: var(--gold); margin-bottom: 30px;" id="final-prize">$0</div>
+        <button class="btn-start" onclick="startGame()">重新挑戰</button>
+    </div>
+
+    <div id="modal-overlay" class="modal" onclick="closeModal()">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 id="modal-title" style="color: var(--gold); margin-top: 0;">標題</h2>
+            <div id="modal-body">內容</div>
+            <button onclick="closeModal()" style="margin-top:20px; padding: 10px 20px; background: #555; color: white; border: none; cursor: pointer;">關閉</button>
+        </div>
+    </div>
+
+    <script>
+        // 100 條題庫
+        const stephenQuestions = [
+          // 1–10 經典台詞題
+          { category: "周星馳電影", question: "「我希望係一萬年」呢句台詞出自邊一套電影？", options: ["大話西遊之月光寶盒", "大話西遊之仙履奇緣", "西遊記第壹佰零壹回", "齊天大聖東遊記"], answerIndex: 1 },
+          { category: "周星馳電影", question: "「做人如果冇夢想，同條鹹魚有咩分別？」出自邊一套電影？", options: ["食神", "喜劇之王", "少林足球", "功夫"], answerIndex: 2 },
+          { category: "周星馳電影", question: "「我係嚴肅㗎！」呢句台詞出自邊套戲？", options: ["唐伯虎點秋香", "九品芝麻官", "逃學威龍", "鹿鼎記"], answerIndex: 0 },
+          { category: "周星馳電影", question: "「我養你啊！」呢句經典台詞出自邊套戲？", options: ["逃學威龍", "破壞之王", "喜劇之王", "國產凌凌漆"], answerIndex: 2 },
+          { category: "周星馳電影", question: "「等我加返朵花先」呢句台詞出自邊套戲？", options: ["唐伯虎點秋香", "大內密探零零發", "武狀元蘇乞兒", "百變星君"], answerIndex: 0 },
+          { category: "周星馳電影", question: "周星馳喺邊套戲入面講過「飛雪連天射白鹿」呢句對白？", options: ["鹿鼎記", "九品芝麻官", "武狀元蘇乞兒", "國產凌凌漆"], answerIndex: 3 },
+          { category: "周星馳電影", question: "「未出嚟行已經輸咗」呢句台詞出自邊套戲？", options: ["賭俠", "賭聖", "賭俠2上海灘賭聖", "賭神2"], answerIndex: 1 },
+          { category: "周星馳電影", question: "「呢啲我就唔講得」呢句台詞出自邊套戲？", options: ["唐伯虎點秋香", "大話西遊之月光寶盒", "國產凌凌漆", "家有喜事"], answerIndex: 2 },
+          { category: "周星馳電影", question: "「唔通你想吃屎咩？」呢句台詞出自邊套戲？", options: ["逃學威龍3", "食神", "少林足球", "九品芝麻官"], answerIndex: 3 },
+          { category: "周星馳電影", question: "「城裡的人想出去，城外的人想進來」呢句說話出自邊套戲？", options: ["功夫", "喜劇之王", "少林足球", "百變星君"], answerIndex: 0 },
+
+          // 11–20 電影名稱＋橋段題
+          { category: "周星馳電影", question: "周星馳著住「牛皮怪皮褸」嘅造型係邊套戲？", options: ["百變星君", "破壞之王", "國產凌凌漆", "逃學威龍"], answerIndex: 2 },
+          { category: "周星馳電影", question: "唐伯虎「倒灶」失意登場，係出自邊套電影？", options: ["鹿鼎記", "唐伯虎點秋香", "九品芝麻官", "破壞之王"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《少林足球》入面，阿星搵返嘅第一個隊員當時喺做咩工作？", options: ["麵包店店員", "保安", "清潔工", "貨車司機"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《食神》入面「黯然銷魂飯」最初係由邊個角色整出嚟？", options: ["食神本人", "雙刀火雞", "火雞師父", "唐牛"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《大話西遊》入面，孫悟空第一次戴上金箍係喺邊一幕？", options: ["紫霞初遇", "月光寶盒穿越後", "菩提示法", "牛魔王決戰前"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《破壞之王》入面，阿榮參加「屈機比賽」嘅對手叫咩名？", options: ["蔡瀾", "吳孟達", "丁力", "高麗"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《家有喜事》1992 入面，周星馳飾演嘅職業係？", options: ["DJ", "化妝師", "攝影師", "演員"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《九品芝麻官》入面飾演皇上嗰位係？", options: ["張家輝", "黃霑", "譚炳文", "吳孟達"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《國產凌凌漆》入面，凌凌漆正式身份係？", options: ["殺手", "特工", "特務廚師", "科學家"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《功夫》入面，火雲邪神第一次出場喺邊度？", options: ["豬籠城寨", "精神病院", "舞廳", "警署"], answerIndex: 1 },
+
+          // 21–30 角色人物題
+          { category: "周星馳電影", question: "《唐伯虎點秋香》入面，唐伯虎口中嘅「美人」一共有幾位？", options: ["4 位", "8 位", "12 位", "18 位"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《喜劇之王》入面，張柏芝飾演嘅角色名叫？", options: ["柳飄飄", "阿飄", "飄姐", "飄紅"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《大話西遊》入面，紫霞仙子係由邊位女演員飾演？", options: ["舒淇", "張柏芝", "莫文蔚", "朱茵"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《逃學威龍》入面，周星馳臥底喺學校用嘅化名係？", options: ["林子聰", "陳家駒", "周家駒", "周星爆"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《大內密探零零發》入面，零零發太太叫咩名？", options: ["阿花", "阿慈", "阿紅", "阿嬌"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《功夫》入面，包租婆最出名嘅武功係？", options: ["鐵布衫", "九陽神功", "獅吼功", "輕功水上飄"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《功夫》入面，理髮店嘅裁縫師傅擅長邊一門功夫？", options: ["咒術", "太極拳", "鴛鴦雙刀", "洪家鐵線拳"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《鹿鼎記》入面，韋小寶最後總共有幾位老婆？", options: ["3 位", "5 位", "7 位", "8 位"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《西遊降魔篇》入面，周星馳主要身份係屬於？", options: ["導演", "編劇＋監製", "演員＋導演", "完全無參與"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《少林足球》入面，負責守龍門嘅係邊個演員？", options: ["謝賢", "黃一山", "林子聰", "田啟文"], answerIndex: 2 },
+
+          // 31–40 經典食物／道具題
+          { category: "周星馳電影", question: "《食神》入面，最經典、最廣為人知嘅一道菜係？", options: ["黃金炒飯", "黯然銷魂飯", "撒尿牛丸", "豬扒包"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《唐伯虎點秋香》入面，唐伯虎最後送畀秋香嘅係？", options: ["詩", "畫像", "花", "扇"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《功夫》入面，阿星童年捧住乜嘢而著迷？", options: ["武功秘笈", "漫畫", "功夫畫冊", "武俠小說"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《九品芝麻官》入面，審問犯人時最常用嘅道具係？", options: ["戒尺", "手銬", "枉法杖", "辣椒水"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《逃學威龍》系列入面，阿星最常用來嚇人或自保嘅武器係？", options: ["木棍", "水槍", "BB 槍", "玩具刀"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《破壞之王》入面，阿榮決戰時主要用嘅係咩？", options: ["拳", "棍", "雙截棍", "索帶"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《百變星君》入面，最具代表性嘅變身裝備係？", options: ["超人戰衣", "鐵甲萬能俠", "變身錶", "多功能眼鏡"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《大內密探零零發》入面，零零發用咩「工具」去開鎖？", options: ["牙刷", "髮夾", "鑰匙扣", "手指"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《鹿鼎記》入面，韋小寶曾經操控過邊樣大型武器？", options: ["大砲", "小刀", "七寶刀", "金絲甲"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《功夫》入面，包租婆最常用嚟追人或者打人嘅「裝備」係？", options: ["拖鞋", "藤條", "手巾", "鬧鐘"], answerIndex: 0 },
+
+          // 41–50 電影細節題
+          { category: "周星馳電影", question: "《大話西遊》入面，鐵扇公主手上嗰把扇叫做？", options: ["香蕉扇", "火焰扇", "鐵扇", "翠綠草扇"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《逃學威龍2》入面，阿星臥底嘅學校名叫？", options: ["東華中學", "葵芳中學", "聖英中學", "國強中學"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《喜劇之王》入面，阿星自稱嘅「第一份工作」係乜？", options: ["臨時演員", "賣臭豆腐", "做外賣", "開的士"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《功夫》入面，阿星同火雲邪神最終決戰喺邊度發生？", options: ["天台", "豬籠城寨內街", "街市", "大樓天井"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《家有喜事》1992 入面，周星馳第一幕出場時喺度做緊咩？", options: ["跳舞", "趕 deadline", "幫妹妹化妝", "被狗追"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《唐伯虎點秋香》入面，秋香喺邊一個大家族入面做丫環？", options: ["華府", "老爺府", "相府", "唐府"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《食神》最後總決賽嘅比賽場地係？", options: ["體育館", "大酒店", "競技館", "大廣場"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《國產凌凌漆》入面，凌凌漆最怕食邊樣食物？", options: ["大閘蟹", "雞翼", "老鼠", "蝦"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《逃學威龍》入面，阿星真正臥底調查嘅案件性質係？", options: ["賭場詐騙", "毒品集團", "黑社會", "走私軍火"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《鹿鼎記》入面，韋小寶最常出現嘅地方係？", options: ["天地會", "客棧", "妓院", "清朝衙門"], answerIndex: 2 },
+
+          // 51–60 冷門知識題
+          { category: "周星馳電影", question: "《功夫》入面，被稱為「五郎八卦棍」嘅角色武學影射邊位功夫巨星？", options: ["洪金寶", "李小龍", "成龍", "劉家輝"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《喜劇之王》入面客串一位「大小聲導演」嘅係？", options: ["杜琪峯", "王晶", "谷德昭", "李力持"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《百變星君》入面，整體惡搞風格最主要係取材自？", options: ["超級英雄電影", "太空歌劇", "機械人動畫", "懸疑片"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《九品芝麻官》故事背景大約設定喺邊個朝代？", options: ["明朝", "清朝", "宋朝", "元朝"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《唐伯虎點秋香》入面，唐伯虎真正嘅專長係？", options: ["畫師", "詩人", "醫師", "商人"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《大話西遊》入面，月光寶盒外形最接近以下邊一種物件？", options: ["青銅罐", "箱子", "木盒", "陶罐"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《破壞之王》入面，大賽嘅擂台設計風格最接近？", options: ["拳擊比賽", "擂台摔角", "泰拳賽", "大力士比賽"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《功夫》入面，理髮師傅所使用嘅拳術係？", options: ["醉拳", "猴拳", "洪拳", "咏春"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《逃學威龍》第一集嘅開場場面係？", options: ["槍戰", "跳機", "臥底訓練", "逃跑"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《食神》入面，料理比賽嘅評分形式最似邊一種節目？", options: ["體育比賽", "武術比賽", "料理鐵人", "歌唱比賽"], answerIndex: 2 },
+
+          // 61–70 合作演員題
+          { category: "周星馳電影", question: "以下邊位男演員被公認為同周星馳合作次數最多？", options: ["吳孟達", "田啟文", "黃一山", "張家輝"], answerIndex: 0 },
+          { category: "周星馳電影", question: "以下邊位女演員被認為係同周星馳合作最有代表性之一？", options: ["張柏芝", "莫文蔚", "朱茵", "梅艷芳"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《功夫》入面，飾演包租公嘅係？", options: ["林雪", "梁家輝", "曾志偉", "元華"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《鹿鼎記》入面，飾演雙兒嘅係邊位女演員？", options: ["鍾麗緹", "周慧敏", "陳妙瑛", "楊羚"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《家有喜事》入面，梅艷芳所飾演嘅角色叫做？", options: ["阿玲", "阿紅", "阿花", "阿梅"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《唐伯虎點秋香》入面，華夫人係由邊位女星飾演？", options: ["藍潔瑛", "關之琳", "鄧萃雯", "葉子媚"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《國產凌凌漆》入面，同周星馳搭檔嘅女主角係？", options: ["李嘉欣", "袁詠儀", "鄭秀文", "劉嘉玲"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《食神》入面，飾演唐牛呢個角色嘅係？", options: ["陳小春", "羅家英", "谷德昭", "張達明"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《破壞之王》入面，反派「聖堂教主」由邊位演員飾演？", options: ["鄭少秋", "吳孟達", "黃秋生", "何家勁"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《少林足球》入面，少林隊隊長係由邊位演員飾演？", options: ["吳鎮宇", "張家輝", "黃一山", "田啟文"], answerIndex: 3 },
+
+          // 71–80 劇情判斷題
+          { category: "周星馳電影", question: "《唐伯虎點秋香》入面，唐伯虎入華府時假扮嘅身份係？", options: ["書僮", "乞丐", "畫師", "木匠"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《功夫》結局部分，阿星被打到之後出現咗咩變化？", options: ["變成植物人", "覺醒成武林高手", "變成白髮老人", "成為殘廢人"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《喜劇之王》入面，教阿星演戲、最重要嗰位「老師」係？", options: ["達叔", "老闆娘", "飄飄", "無名氏"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《少林足球》入面，綽號「阿肥」嘅隊友最擅長邊方面？", options: ["折返跑", "彈性腰力", "防守蹲姿", "開胯"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《大話西遊》入面，紫青寶劍最重要嘅能力係？", options: ["打開月光寶盒", "控制時間", "控制孫悟空", "斬妖除魔"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《功夫》入面，被稱為「高手中的高手」嘅角色係？", options: ["裁縫", "拉麵師傅", "苦力強", "火雲邪神"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《逃學威龍》結局，阿星最後高呼邊句說話作結？", options: ["救命啊！", "做乜啊？", "交槍啦！", "收工！"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《食神》入面，火雞師父嘅畢生絕學係？", options: ["香辣雞煲", "火雞拳", "爆香三式", "黯然銷魂飯基礎版"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《鹿鼎記》入面，韋小寶真正背後所屬嘅組織身份係？", options: ["皇族", "平民", "天地會香主", "江洋大盜"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《大話西遊之仙履奇緣》結局，紫霞最終結果係？", options: ["消失", "被救", "成仙", "重新輪迴"], answerIndex: 1 },
+
+          // 81–90 年代與背景題
+          { category: "周星馳電影", question: "《唐伯虎點秋香》大概係設定喺邊個朝代？", options: ["明朝", "清朝", "漢朝", "唐朝"], answerIndex: 0 },
+          { category: "周星馳電影", question: "《國產凌凌漆》嘅時代背景最接近？", options: ["60 年代", "70 年代", "90 年代", "未來時代"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《逃學威龍3》主要圍繞邊一個題材？", options: ["黑幫", "恐怖份子", "日本黑道", "外星人"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《功夫》入面所呈現嘅香港社會氛圍，大約係邊個年代？", options: ["40–50 年代", "60–70 年代", "70–80 年代", "80–90 年代"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《少林足球》正式上映年份係？", options: ["1998 年", "2001 年", "2004 年", "2008 年"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《少林足球》奪得香港電影金像獎最佳電影嘅年份係？", options: ["2000 年", "2002 年", "2005 年", "2007 年"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《喜劇之王》喺香港上映嘅年份係？", options: ["1997 年", "1998 年", "1999 年", "2000 年"], answerIndex: 2 },
+          { category: "周星馳電影", question: "《大話西遊》系列首度於內地／香港上映大約係？", options: ["1993 年", "1994 年", "1995 年", "1996 年"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《功夫》喺香港正式上映嘅年份係？", options: ["2000 年", "2001 年", "2002 年", "2004 年"], answerIndex: 3 },
+          { category: "周星馳電影", question: "《破壞之王》喺香港上映嘅年份係？", options: ["1993 年", "1994 年", "1995 年", "1996 年"], answerIndex: 2 },
+
+          // 91–100 星爺本人題
+          { category: "周星馳電影", question: "周星馳出生年份係？", options: ["1960 年", "1961 年", "1962 年", "1963 年"], answerIndex: 2 },
+          { category: "周星馳電影", question: "「星爺」呢個外號最常被認為係點樣流行開去？", options: ["粉絲自發叫", "電影公司官方命名", "電台 DJ 幫佢改", "吳孟達開玩笑咁叫開"], answerIndex: 3 },
+          { category: "周星馳電影", question: "周星馳第一套真正令佢做「男主角」大紅嘅電影係？", options: ["捕風漢", "望夫成龍", "他來自江湖", "賭聖"], answerIndex: 3 },
+          { category: "周星馳電影", question: "以下邊位導演係周星馳合作次數最多同風格最密切嘅其中一位？", options: ["王晶", "杜琪峯", "谷德昭", "李力持"], answerIndex: 3 },
+          { category: "周星馳電影", question: "周星馳最初入行時喺娛樂圈嘅身份係？", options: ["演員", "主持人", "武師", "群眾演員"], answerIndex: 1 },
+          { category: "周星馳電影", question: "周星馳其中一個最為人熟知嘅興趣係？", options: ["攝影", "足球", "音樂", "武術"], answerIndex: 1 },
+          { category: "周星馳電影", question: "傳聞中周星馳特別鍾意邊一隊足球隊？", options: ["巴塞隆拿", "阿仙奴", "曼聯", "皇家馬德里"], answerIndex: 1 },
+          { category: "周星馳電影", question: "《少林足球》創作靈感主要混合咗功夫加上邊一種元素？", options: ["功夫片", "足球漫畫", "拳擊電影", "香港社會新聞"], answerIndex: 1 },
+          { category: "周星馳電影", question: "周星馳首次以導演身份正式掛名嘅作品係？", options: ["少林足球", "大話西遊", "破壞之王", "回魂夜"], answerIndex: 0 },
+          { category: "周星馳電影", question: "周星馳經常形容自己係一個？", options: ["好演員", "好導演", "小人物", "永遠的學習者"], answerIndex: 3 }
+        ];
+
+        // 獎金階梯
+        const moneyTree = [
+            1000, 2000, 3000, 5000, 10000,
+            20000, 40000, 80000, 150000, 250000,
+            500000, 1000000, 2500000, 5000000, 10000000
+        ];
+
+        /* --- 遊戲狀態變數 --- */
+        let currentSessionQuestions = []; // 當前這局隨機抽出的 15 題
+        let currentLevel = 0; // 0-14
+        let isLocked = false;
+        let lifelines = {
+            "5050": false,
+            "poll": false,
+            "phone": false
+        };
+
+        /* --- 初始化 --- */
+        function init() {
+            const ladderEl = document.getElementById('ladder');
+            ladderEl.innerHTML = '';
+            for (let i = 0; i < moneyTree.length; i++) {
+                const step = document.createElement('div');
+                step.className = 'ladder-step';
+                if ((i + 1) % 5 === 0) step.classList.add('safety');
+                step.innerHTML = `<span>${i + 1}</span> <span>$${moneyTree[i].toLocaleString()}</span>`;
+                step.id = `step-${i}`;
+                ladderEl.appendChild(step);
+            }
+        }
+
+        /* --- 隨機抽選題目 --- */
+        function getRandomQuestions(count) {
+            const pool = [...stephenQuestions]; // 複製一份
+            const result = [];
+            const n = Math.min(count, pool.length);
+
+            for (let i = 0; i < n; i++) {
+                const idx = Math.floor(Math.random() * pool.length);
+                result.push(pool[idx]);
+                pool.splice(idx, 1); // 移除已選，避免重複
+            }
+            return result;
+        }
+
+        /* --- 遊戲流程 --- */
+        function startGame() {
+            // 1. 隨機抽選 15 題
+            currentSessionQuestions = getRandomQuestions(15);
+            
+            currentLevel = 0;
+            isLocked = false;
+            lifelines = { "5050": false, "poll": false, "phone": false };
+            
+            document.querySelectorAll('.lifeline-btn').forEach(btn => btn.classList.remove('used'));
+            document.getElementById('start-screen').style.display = 'none';
+            document.getElementById('end-screen').style.display = 'none';
+            
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            isLocked = false;
+            const qData = currentSessionQuestions[currentLevel]; // 從隨機池中取題
+            
+            document.getElementById('current-level-display').innerText = `第 ${currentLevel + 1} 題`;
+            document.getElementById('current-money-display').innerText = 
+                currentLevel > 0 ? `$${moneyTree[currentLevel-1].toLocaleString()}` : "$0";
+            document.getElementById('q-category').innerText = qData.category;
+            document.getElementById('q-text').innerText = qData.question;
+
+            for (let i = 0; i < 4; i++) {
+                const btn = document.getElementById(`btn-${i}`);
+                btn.innerText = qData.options[i];
+                btn.className = 'option-btn';
+                btn.style.visibility = 'visible';
+                btn.disabled = false;
+            }
+
+            updateLadder();
+        }
+
+        function updateLadder() {
+            for (let i = 0; i < moneyTree.length; i++) {
+                const step = document.getElementById(`step-${i}`);
+                step.classList.remove('active', 'passed');
+                if (i === currentLevel) step.classList.add('active');
+                else if (i < currentLevel) step.classList.add('passed');
+            }
+        }
+
+        function handleAnswer(selectedIndex) {
+            if (isLocked) return;
+            isLocked = true;
+
+            // 從當前題目中獲取正確答案索引
+            const correctIndex = currentSessionQuestions[currentLevel].answerIndex;
+            const selectedBtn = document.getElementById(`btn-${selectedIndex}`);
+            const correctBtn = document.getElementById(`btn-${correctIndex}`);
+
+            selectedBtn.classList.add('selected');
+
+            setTimeout(() => {
+                if (selectedIndex === correctIndex) {
+                    selectedBtn.classList.remove('selected');
+                    selectedBtn.classList.add('correct');
+                    
+                    setTimeout(() => {
+                        currentLevel++;
+                        if (currentLevel >= 15) { // 15題通關
+                            gameWin();
+                        } else {
+                            loadQuestion();
+                        }
+                    }, 1500);
+                } else {
+                    selectedBtn.classList.remove('selected');
+                    selectedBtn.classList.add('wrong');
+                    correctBtn.classList.add('correct');
+                    
+                    setTimeout(() => {
+                        gameOver();
+                    }, 2000);
+                }
+            }, 1000);
+        }
+
+        function gameOver() {
+            let prize = 0;
+            if (currentLevel >= 10) prize = moneyTree[9];
+            else if (currentLevel >= 5) prize = moneyTree[4];
+            
+            document.getElementById('end-title').innerText = "挑戰失敗";
+            document.getElementById('end-msg').innerHTML = `
+                很遺憾，你在第 ${currentLevel + 1} 題止步。<br>
+                「我空虛、我寂寞、我凍...」
+            `;
+            document.getElementById('final-prize').innerText = `$${prize.toLocaleString()}`;
+            document.getElementById('end-screen').style.display = 'flex';
+        }
+
+        function gameWin() {
+            const prize = moneyTree[14];
+            document.getElementById('end-title').innerText = "恭喜通關！";
+            document.getElementById('end-msg').innerHTML = `
+                「依家你係百萬富翁啦，唔好再返去火星啦！」<br>
+                你簡直係星爺嘅超級粉絲！
+            `;
+            document.getElementById('final-prize').innerText = `$${prize.toLocaleString()}`;
+            document.getElementById('end-screen').style.display = 'flex';
+        }
+
+        /* --- 錦囊 --- */
+        function useLifeline(type) {
+            if (isLocked || lifelines[type]) return;
+            
+            lifelines[type] = true;
+            document.getElementById(`ll-${type}`).classList.add('used');
+            
+            const correctIndex = currentSessionQuestions[currentLevel].answerIndex;
+
+            if (type === '5050') {
+                let wrongIndices = [0, 1, 2, 3].filter(i => i !== correctIndex);
+                wrongIndices.sort(() => Math.random() - 0.5);
+                document.getElementById(`btn-${wrongIndices[0]}`).style.visibility = 'hidden';
+                document.getElementById(`btn-${wrongIndices[1]}`).style.visibility = 'hidden';
+            
+            } else if (type === 'poll') {
+                let stats = [0, 0, 0, 0];
+                let remaining = 100;
+                stats[correctIndex] = Math.floor(Math.random() * 20) + 60; // 60-80%
+                remaining -= stats[correctIndex];
+
+                for (let i = 0; i < 4; i++) {
+                    if (i !== correctIndex) {
+                        let val = Math.floor(Math.random() * remaining);
+                        if (i === 3 || remaining < 5) val = remaining;
+                        stats[i] = val;
+                        remaining -= val;
+                    }
+                }
+                if (remaining > 0) stats[(correctIndex + 1) % 4] += remaining;
+                showPollModal(stats);
+
+            } else if (type === 'phone') {
+                const friends = ["達叔", "如花", "醬爆", "石榴姐"];
+                const friendName = friends[Math.floor(Math.random() * friends.length)];
+                const chars = ["A", "B", "C", "D"];
+                
+                let suggestedIndex = correctIndex;
+                if (Math.random() > 0.85) { // 15% 機率說錯
+                    suggestedIndex = (correctIndex + 1) % 4;
+                }
+
+                const messages = [
+                    `喂？係我呀！呢題我識，肯定係 ${chars[suggestedIndex]}！信我啦！`,
+                    `你打俾我做咩呀？借錢免談！...哦問呢題呀？應該係 ${chars[suggestedIndex]} 啩...`,
+                    `以我多年行走江湖嘅經驗，呢題九成九係 ${chars[suggestedIndex]}。`,
+                    `好大機會係 ${chars[suggestedIndex]}，如果唔係我切頭俾你當凳坐！`
+                ];
+                const msg = messages[Math.floor(Math.random() * messages.length)];
+
+                showModal("電話求助", `
+                    <div style="text-align:center; margin-bottom:10px; font-size:1.2rem; color:var(--gold);">正在通話：${friendName}</div>
+                    <div class="phone-msg">${msg}</div>
+                `);
+            }
+        }
+
+        function showPollModal(stats) {
+            const chars = ["A", "B", "C", "D"];
+            let html = '<div class="chart-container">';
+            for (let i = 0; i < 4; i++) {
+                html += `
+                    <div class="bar-wrap">
+                        <div class="bar-val">${stats[i]}%</div>
+                        <div class="bar" style="height: ${stats[i] * 1.5}px"></div>
+                        <div class="bar-label">${chars[i]}</div>
+                    </div>
+                `;
+            }
+            html += '</div>';
+            showModal("觀眾票選結果", html);
+        }
+
+        function showModal(title, content) {
+            document.getElementById('modal-title').innerText = title;
+            document.getElementById('modal-body').innerHTML = content;
+            document.getElementById('modal-overlay').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('modal-overlay').style.display = 'none';
+        }
+
+        init();
+    </script>
+</body>
+</html>
